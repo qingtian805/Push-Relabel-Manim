@@ -1,5 +1,8 @@
 from manim import *
 
+def standard_vertice(label: MathTex):
+    return LabeledDot(label=label, radius=0.5, stroke_width=2, stroke_color=BLUE, fill_opacity=0)
+
 def update_arrow(arrow:LabeledArrow, start, end):
     tip = arrow.pop_tips()[0]
     arrow.set_points_by_ends(start, end)
@@ -9,6 +12,43 @@ def update_arrow(arrow:LabeledArrow, start, end):
 def update_dot_fill(dot:LabeledDot, color, opacity):
     dot.set_fill(color, opacity)
     dot.submobjects[0].set_fill(WHITE, opacity=1)
+
+def init_flow_net():
+    # ---Init Flow_Net---
+    # Creating Init Vertices
+    vert_label = ["v_1", "v_2", "v_3", "v_4", "s", "t"]
+    vertices = {}
+    for i in vert_label:
+        print(i, type(i))
+        vert = standard_vertice(MathTex(i))
+        vertices[i] = vert
+    del vert_label
+
+    vertices["v_1"].move_to((-2, 1.5, 0))
+    vertices["v_2"].move_to((-2, -1.5, 0))
+    vertices["v_3"].move_to((2, 1.5, 0))
+    vertices["v_4"].move_to((2, -1.5, 0))
+    vertices["t"].move_to((6, 0, 0))
+    vertices["s"].move_to((-6, 0, 0))
+
+    update_dot_fill(vertices["s"], DARK_BLUE, 1)
+
+    # Creating Edges
+    edge_label = {
+        ("s", "v_1"): "16", ("s", "v_2"): "13",
+        ("v_1", "v_3"): "12",
+        ("v_2", "v_1"): "4", ("v_2", "v_4"): "14",\
+        ("v_3", 't'): "20", ("v_3", "v_2"): "2",\
+        ("v_4", "t"): "4", ("v_4", "v_3"): "7",
+    }
+    edges = {}
+    for (u, v) in edge_label:
+        edge = LabeledArrow(label=MathTex(edge_label[(u, v)]))
+        update_arrow(edge, start=vertices[u], end=vertices[v])
+        edges[(u, v)] = edge
+    del edge_label
+
+    return vertices, edges
 
 def animate_flow(scene:Scene, quantity, start: LabeledDot, end: LabeledDot, capcity, used, edge):
     data: list[Square] = []
@@ -86,44 +126,6 @@ def animate_flow_parallel(scene:Scene, quantity, start: LabeledDot, end: Labeled
     scene.remove(*data)
 
     return new_edge, new_parallel
-
-def init_flow_net():
-    # ---Init Flow_Net---
-    # Creating Init Vertices
-    vert_label = ["v_1", "v_2", "v_3", "v_4", "s", "t"]
-    vertices = {}
-    for i in vert_label:
-        print(i, type(i))
-        vert = LabeledDot(MathTex(i), radius=0.5, stroke_width=2, stroke_color=BLUE, fill_opacity=0)
-        vertices[i] = vert
-    del vert_label
-
-    vertices["v_1"].move_to((-2, 1.5, 0))
-    vertices["v_2"].move_to((-2, -1.5, 0))
-    vertices["v_3"].move_to((2, 1.5, 0))
-    vertices["v_4"].move_to((2, -1.5, 0))
-    vertices["t"].move_to((6, 0, 0))
-    vertices["s"].move_to((-6, 0, 0))
-
-    update_dot_fill(vertices["s"], DARK_BLUE, 1)
-
-    # Creating Edges
-    edge_label = {
-        ("s", "v_1"): "16", ("s", "v_2"): "13",
-        ("v_1", "v_3"): "12",
-        ("v_2", "v_1"): "4", ("v_2", "v_4"): "14",\
-        ("v_3", 't'): "20", ("v_3", "v_2"): "2",\
-        ("v_4", "t"): "4", ("v_4", "v_3"): "7",
-    }
-    edges = {}
-    for (u, v) in edge_label:
-        edge = LabeledArrow(label=MathTex(edge_label[(u, v)]))
-        update_arrow(edge, start=vertices[u], end=vertices[v])
-        edges[(u, v)] = edge
-    del edge_label
-
-    return vertices, edges
-
 
 class Flow_Net(Scene):
     def construct(self):
@@ -207,8 +209,8 @@ class Residual_Net(Scene):
         # self.play(title.animate.to_edge(UP))
 
         # ---Draw a Simple Flow Net---
-        source = LabeledDot(MathTex("s"), radius=0.5, stroke_width=2, stroke_color=BLUE, fill_opacity=0).shift(LEFT*2)
-        target = LabeledDot(MathTex("t"), radius=0.5, stroke_width=2, stroke_color=BLUE, fill_opacity=0).shift(RIGHT*2)
+        source = standard_vertice(MathTex("s")).shift(LEFT*2)
+        target = standard_vertice(MathTex("t")).shift(RIGHT*2)
 
         update_dot_fill(source, DARK_BLUE, 1)
 
@@ -239,6 +241,8 @@ class Residual_Net(Scene):
         # ---Aminate Full Flow on Residual net---
         res_flow, res_parallew = animate_flow_parallel(self, 4, res_source, res_target, 8, 8, res_flow, res_parallew)
 
+        self.play(FadeOut(*self.mobjects))
+
 class Push_Relabel(Scene):
     def construct(self):
         vertices, edges = init_flow_net()
@@ -258,8 +262,24 @@ class Push_Relabel(Scene):
         self.play(subtitle.animate.scale(0.5))
         self.play(subtitle.animate.next_to(title))
 
-        flow_net = VGroup(*vertices.values(), *edges.values())
-        self.play(Write(flow_net))
+        # ---Stage: overflow at 4, capcity at 8---
+        temp_s = standard_vertice(MathTex("v_1")).shift(LEFT*2)
+        temp_t = standard_vertice(MathTex("v_2")).shift(RIGHT*2)
+
+        flow = LabeledArrow(label=MathTex("8"))
+        update_arrow(flow, temp_s.get_corner(UR), temp_t.get_corner(UL))
+
+        over_flow = LabeledArrow(label=MathTex("4"))
+        update_arrow(over_flow, temp_s.get_edge_center(DOWN), temp_s.get_edge_center(DOWN) + DOWN * 2)
+
+        self.play(Write(temp_s), Write(temp_t), Write(flow),)
+        self.wait()
+        self.play(Write(over_flow))
+
+        animate_flow_parallel(self, 4, )
+
+        # flow_net = VGroup(*vertices.values(), *edges.values())
+        # self.play(Write(flow_net))
 
 
 class test(Scene):
