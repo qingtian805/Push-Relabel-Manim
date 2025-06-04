@@ -1,4 +1,5 @@
 from manim import *
+import typing
 
 def standard_vertice(label: MathTex):
     return LabeledDot(label=label, radius=0.5, stroke_width=2, stroke_color=BLUE, fill_opacity=0)
@@ -13,7 +14,7 @@ def update_dot_fill(dot:LabeledDot, color, opacity):
     dot.set_fill(color, opacity)
     dot.submobjects[0].set_fill(WHITE, opacity=1)
 
-def init_flow_net():
+def init_flow_net() ->tuple[typing.Dict[str, LabeledDot], typing.Dict[tuple[str, str], LabeledArrow]]:
     # ---Init Flow_Net---
     # Creating Init Vertices
     vert_label = ["v_1", "v_2", "v_3", "v_4", "s", "t"]
@@ -50,7 +51,24 @@ def init_flow_net():
 
     return vertices, edges
 
-def animate_flow(scene:Scene, quantity, start: LabeledDot, end: LabeledDot, capcity, used, edge):
+def create_over_flow(quantity, end_point:LabeledDot, direction):
+    over_flow = LabeledArrow(label=MathTex(f"{quantity}"))
+    update_arrow(over_flow, end_point, end_point.get_edge_center(direction)+1.5 * direction)
+    
+    return over_flow
+
+def animate_update_labeleddot(labeled:LabeledDot, new_label:MathTex) -> Transform:
+    return Transform(labeled.submobjects[0], new_label.move_to(labeled))
+
+def animate_update_labeledarrow(labeled:LabeledArrow, new_label:MathTex) -> Transform:
+    new_arrow = LabeledArrow(label=new_label)
+    update_arrow(new_arrow, labeled.get_start(), labeled.get_end())
+    return Transform(labeled, new_arrow)
+
+def play_animate_flow(scene:Scene, quantity, start: LabeledDot, end: LabeledDot, capcity, used, edge, play:Animation = []):
+    if quantity > 10:
+        quantity = 10
+    
     data: list[Square] = []
     for i in range(quantity):
         data.append(Square(side_length=0.3, color=BLUE).move_to(start))
@@ -65,17 +83,18 @@ def animate_flow(scene:Scene, quantity, start: LabeledDot, end: LabeledDot, capc
 
     scene.play(AnimationGroup(
         Transform(edge, new_edge),
-        AnimationGroup(*animations, lag_ratio=0.3),
-        )
+        AnimationGroup(*animations, lag_ratio=0.2),
+        ),
+        *play
     )
-    scene.remove(*data)
+    scene.play(FadeOut(*data))
     # new_edge.to_corner()
     scene.add(new_edge)
     scene.remove(edge)
 
     return new_edge
 
-def animate_flow_parallel(scene:Scene, quantity, start: LabeledDot, end: LabeledDot, capcity, used, edge=None, parallel_edge=None):
+def play_animate_flow_parallel(scene:Scene, quantity, start: LabeledDot, end: LabeledDot, capcity, used, edge=None, parallel_edge=None, play:Animation = []):
     def create_parallel():
         new_parallel = LabeledArrow(label=MathTex(f"{used}"))
         update_arrow(new_parallel, end.get_corner(DL), start.get_corner(DR))
@@ -85,7 +104,8 @@ def animate_flow_parallel(scene:Scene, quantity, start: LabeledDot, end: Labeled
         new_edge = LabeledArrow(label=MathTex(f"{capcity - used}"))
         update_arrow(new_edge, start.get_corner(UR), end.get_corner(UL))
         return new_edge
-
+    if quantity > 10:
+        quantity = 10
     data: list[Square] = []
     for i in range(quantity):
         data.append(Square(side_length=0.3, color=BLUE).move_to(start))
@@ -118,8 +138,9 @@ def animate_flow_parallel(scene:Scene, quantity, start: LabeledDot, end: Labeled
 
     scene.play(AnimationGroup(
         *edge_animations,
-        AnimationGroup(*data_animations, lag_ratio=0.3),
-        )
+        AnimationGroup(*data_animations, lag_ratio=0.2),
+        ),
+        *play
     )
     scene.add(*new_edges)
     scene.remove(edge, parallel_edge)
@@ -201,12 +222,12 @@ class Residual_Net(Scene):
     def construct(self):
         # ---!!!Start Animation!!!---
         # ---Title---
-        # title = Text("残留网络").scale(2)
-        # title.set_color(WHITE)
-        # self.play(Write(title))
-        # self.wait(1)
-        # self.play(title.animate.scale(0.5))
-        # self.play(title.animate.to_edge(UP))
+        title = Text("残留网络").scale(2)
+        title.set_color(WHITE)
+        self.play(Write(title))
+        self.wait(1)
+        self.play(title.animate.scale(0.5))
+        self.play(title.animate.to_edge(UP))
 
         # ---Draw a Simple Flow Net---
         source = standard_vertice(MathTex("s")).shift(LEFT*2)
@@ -230,64 +251,134 @@ class Residual_Net(Scene):
         self.play(Write(res_net))
 
         # ---Aminate Flow on Flow net---
-        flow = animate_flow(self, 4, source, target, 8, 4, flow)
+        flow = play_animate_flow(self, 4, source, target, 8, 4, flow)
 
         # ---Aminate Flow on Residual net---
-        res_flow, res_parallew = animate_flow_parallel(self, 4, res_source, res_target, 8, 4, res_flow, None)
+        res_flow, res_parallew = play_animate_flow_parallel(self, 4, res_source, res_target, 8, 4, res_flow, None)
 
         # ---Aminate Full Flow on Flow net ---
-        flow = animate_flow(self, 4, source, target, 8, 8, flow)
+        flow = play_animate_flow(self, 4, source, target, 8, 8, flow)
 
         # ---Aminate Full Flow on Residual net---
-        res_flow, res_parallew = animate_flow_parallel(self, 4, res_source, res_target, 8, 8, res_flow, res_parallew)
+        res_flow, res_parallew = play_animate_flow_parallel(self, 4, res_source, res_target, 8, 8, res_flow, res_parallew)
 
         self.play(FadeOut(*self.mobjects))
 
 class Push_Relabel(Scene):
     def construct(self):
+        # # ---!!!Start Animations!!!---
+        # # ---Title---
+        # title = Text("推送-重贴标签算法").scale(2)
+        # title.set_color(WHITE)
+        # self.play(Write(title))
+        # self.wait(1)
+        # self.play(title.animate.scale(0.5))
+        # self.play(title.animate.to_edge(UP))
+
+        # # subtitle = Text("基本操作").scale(0.8).scale(2)
+        # self.play(Write(subtitle))
+        # self.wait()
+        # self.play(subtitle.animate.scale(0.5))
+        # self.play(subtitle.animate.next_to(title))
+
+        # # ---Stage: overflow at 8, capcity at 4, target 1h, source 0h---
+        # temp_s = standard_vertice(MathTex("v_1")).shift(LEFT*2)
+        # temp_t = standard_vertice(MathTex("v_2")).shift(RIGHT*2)
+        # update_dot_fill(temp_t, DARK_BLUE, 0.5)
+
+        # flow = LabeledArrow(label=MathTex("4"))
+        # update_arrow(flow, temp_s.get_corner(UR), temp_t.get_corner(UL))
+
+        # over_flow = LabeledArrow(label=MathTex("8"))
+        # update_arrow(over_flow, temp_s.get_edge_center(DOWN), temp_s.get_edge_center(DOWN) + DOWN * 2)
+
+        # temp_s_height = standard_vertice(MathTex("0")).shift(LEFT*2)
+        # temp_t_height = standard_vertice(MathTex("1")).shift(RIGHT*2)
+        # update_dot_fill(temp_s_height, DARK_BLUE, 0.2)
+        
+        # self.play(Write(temp_s), Write(temp_t), Write(flow),)
+        # self.wait()
+        # self.play(Transform(temp_s, temp_s_height), Transform(temp_t, temp_t_height))
+        # self.play(Write(over_flow))
+        # self.wait()
+
+        # # ---Animating Relabeling---
+        # temp_s_height.submobjects[0] = MathTex("2").move_to(temp_s_height)
+        # update_dot_fill(temp_s_height, DARK_BLUE, 0.4)
+
+        # self.play(Transform(temp_s, temp_s_height))
+
+        # # ---Animating Pushing Flow---
+        # self.wait()
+        # new_over_flow = LabeledArrow(label=MathTex("4"))
+        # remain_flow = LabeledArrow(label=MathTex("4"))
+        # update_arrow(new_over_flow, temp_t_height.get_edge_center(DOWN), temp_t_height.get_edge_center(DOWN) + DOWN * 2)
+        # update_arrow(remain_flow, temp_s_height.get_edge_center(DOWN), temp_s_height.get_edge_center(DOWN) + DOWN * 2)
+
+        # flow, parallel = play_animate_flow_parallel(self, 4, temp_s, temp_t, 8, 4, flow, None,\
+        #                                        play=[Transform(over_flow, remain_flow), Write(new_over_flow)])
+
+        # self.play(FadeOut(temp_s, temp_t, temp_s_height, temp_t_height),
+        #           FadeOut(flow, parallel, new_over_flow, remain_flow, over_flow))
+        # ---Reconstructing Stage---
+        # del temp_s, temp_s_height
+        # del temp_t, temp_t_height
+        # del flow, over_flow, new_over_flow, parallel, remain_flow
+
         vertices, edges = init_flow_net()
-
-        # ---!!!Start Animations!!!---
-        # ---Title---
-        title = Text("推送-重贴标签算法").scale(2)
-        title.set_color(WHITE)
-        self.play(Write(title))
-        self.wait(1)
-        self.play(title.animate.scale(0.5))
-        self.play(title.animate.to_edge(UP))
-
-        subtitle = Text("基本操作").scale(0.8).scale(2)
-        self.play(Write(subtitle))
+        parallels = {}
+        flow_net = VGroup(*vertices.values(), *edges.values())
+        self.play(Write(flow_net))
         self.wait()
-        self.play(subtitle.animate.scale(0.5))
-        self.play(subtitle.animate.next_to(title))
-
-        # ---Stage: overflow at 4, capcity at 8---
-        temp_s = standard_vertice(MathTex("v_1")).shift(LEFT*2)
-        temp_t = standard_vertice(MathTex("v_2")).shift(RIGHT*2)
-
-        flow = LabeledArrow(label=MathTex("8"))
-        update_arrow(flow, temp_s.get_corner(UR), temp_t.get_corner(UL))
-
-        over_flow = LabeledArrow(label=MathTex("4"))
-        update_arrow(over_flow, temp_s.get_edge_center(DOWN), temp_s.get_edge_center(DOWN) + DOWN * 2)
-
-        self.play(Write(temp_s), Write(temp_t), Write(flow),)
+        # ---Initalizing---
+        animations = []
+        for i in vertices.values():
+            animations.append(animate_update_labeleddot(i, MathTex("0")))
+        animations.append(animate_update_labeleddot(vertices["s"], MathTex("6")))
+        self.play(*animations)
         self.wait()
-        self.play(Write(over_flow))
 
-        animate_flow_parallel(self, 4, )
+        animations.clear()
+        over_flows = {}
+        over_flows["s"] = create_over_flow("16+13", vertices["s"], DOWN)
 
-        # flow_net = VGroup(*vertices.values(), *edges.values())
-        # self.play(Write(flow_net))
+        self.play(Write(over_flows["s"]))
+        self.play(animate_update_labeledarrow(over_flows["s"], MathTex(f"{16+13}")))
+        self.wait()
+
+        over_flows["v_1"] = create_over_flow(16, vertices["v_1"], UP)
+        self.play(animate_update_labeledarrow(over_flows["s"], MathTex(f"{13}")))
+        edges[("s", "v_1")],  parallels[("s", "v_1")]= play_animate_flow_parallel(self, 16, vertices["s"], vertices["v_1"], 16, 16,\
+                                                            edges[("s", "v_1")], None,
+                                                            [Write(over_flows["v_1"])])
+        self.wait()
+        
+        over_flows["v_2"] = create_over_flow(13, vertices["v_2"], DOWN)
+        self.play(FadeOut(over_flows["s"]));over_flows.pop("s")
+        edges["s", "v_2"], parallels["s","v_2"] = play_animate_flow_parallel(self, 13, vertices["s"], vertices["v_2"], 13, 13,\
+                                                                             edges[("s", "v_2")], None,\
+                                                                             [Write(over_flows["v_2"])])
+        self.wait()
+
+        # ---Pushing v_1
+
+
+        
 
 
 class test(Scene):
     def construct(self):
-        a = LabeledDot(MathTex("v_1", color=BLACK))
+        a = Square(color=RED)
+        b = Circle(color=BLUE)
 
-        self.add(a)
-        a.animate.move_to()
+        self.play(Transform(a, b))
+
+        self.remove(a)
+        # self.play(b.animate.to_corner())
+        # self.play(a.animate.to_corner(UR))
+        self.wait()
+
+
 
 
 
