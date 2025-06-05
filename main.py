@@ -355,7 +355,7 @@ class Push_Relabel(Scene):
         self.play(title.animate.scale(0.5))
         self.play(title.animate.to_edge(UP))
 
-        # subtitle = Text("基本操作").scale(0.8).scale(2)
+        subtitle = Text("基本操作").scale(0.8).scale(2)
         self.play(Write(subtitle))
         self.wait()
         self.play(subtitle.animate.scale(0.5))
@@ -497,6 +497,7 @@ class Push_Relabel(Scene):
 class test(Scene):
     def construct(self):
         pass
+        
         
     def __init__(self):
         direction = UL
