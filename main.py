@@ -346,58 +346,58 @@ class Residual_Net(Scene):
 
 class Push_Relabel(Scene):
     def construct(self):
-        # # ---!!!Start Animations!!!---
-        # # ---Title---
-        # title = Text("推送-重贴标签算法").scale(2)
-        # title.set_color(WHITE)
-        # self.play(Write(title))
-        # self.wait(1)
-        # self.play(title.animate.scale(0.5))
-        # self.play(title.animate.to_edge(UP))
+        # ---!!!Start Animations!!!---
+        # ---Title---
+        title = Text("推送-重贴标签算法").scale(2)
+        title.set_color(WHITE)
+        self.play(Write(title))
+        self.wait(1)
+        self.play(title.animate.scale(0.5))
+        self.play(title.animate.to_edge(UP))
 
-        # # subtitle = Text("基本操作").scale(0.8).scale(2)
-        # self.play(Write(subtitle))
-        # self.wait()
-        # self.play(subtitle.animate.scale(0.5))
-        # self.play(subtitle.animate.next_to(title))
+        # subtitle = Text("基本操作").scale(0.8).scale(2)
+        self.play(Write(subtitle))
+        self.wait()
+        self.play(subtitle.animate.scale(0.5))
+        self.play(subtitle.animate.next_to(title))
 
-        # # ---Stage: overflow at 8, capcity at 4, target 1h, source 0h---
-        # # ---Draw Residual Net---
-        # temp_s = standard_vertice(MathTex("v_1")).shift(LEFT*2)
-        # temp_t = standard_vertice(MathTex("v_2")).shift(RIGHT*2)
-        # update_dot_fill(temp_t, DARK_BLUE, 0.3)
+        # ---Stage: overflow at 8, capcity at 4, target 1h, source 0h---
+        # ---Draw Residual Net---
+        temp_s = standard_vertice(MathTex("v_1")).shift(LEFT*2)
+        temp_t = standard_vertice(MathTex("v_2")).shift(RIGHT*2)
+        update_dot_fill(temp_t, DARK_BLUE, 0.3)
 
-        # flow = LabeledArrow(label=MathTex("4"))
-        # update_arrow(flow, temp_s.get_corner(UR), temp_t.get_corner(UL))
+        flow = LabeledArrow(label=MathTex("4"))
+        update_arrow(flow, temp_s.get_corner(UR), temp_t.get_corner(UL))
 
-        # self.play(Write(temp_s), Write(temp_t), Write(flow),)
-        # self.wait()
-        # # ---Add Overflow and Height---
-        # overflow = create_overflow(8, temp_s, DOWN)
+        self.play(Write(temp_s), Write(temp_t), Write(flow),)
+        self.wait()
+        # ---Add Overflow and Height---
+        overflow = create_overflow(8, temp_s, DOWN)
 
-        # temp_s_height = standard_vertice(MathTex("0")).shift(LEFT*2)
-        # temp_t_height = standard_vertice(MathTex("1")).shift(RIGHT*2)
-        # update_dot_fill(temp_t_height, DARK_BLUE, 0.3)
+        temp_s_height = standard_vertice(MathTex("0")).shift(LEFT*2)
+        temp_t_height = standard_vertice(MathTex("1")).shift(RIGHT*2)
+        update_dot_fill(temp_t_height, DARK_BLUE, 0.3)
         
-        # self.play(Transform(temp_s, temp_s_height), Transform(temp_t, temp_t_height))
-        # self.play(Write(overflow))
-        # self.wait()
+        self.play(Transform(temp_s, temp_s_height), Transform(temp_t, temp_t_height))
+        self.play(Write(overflow))
+        self.wait()
 
-        # # ---Animating Relabeling---
-        # play_animate_relabel(self, temp_s, 2, 0.5)
+        # ---Animating Relabeling---
+        play_animate_relabel(self, temp_s, 2, 0.5)
 
-        # self.wait()
+        self.wait()
 
-        # # ---Animating Pushing Flow---
-        # flow, parallel, overflow, t_overflow = play_animate_push(self, temp_s, temp_t, flow, None, overflow, None)
+        # ---Animating Pushing Flow---
+        flow, parallel, overflow, t_overflow = play_animate_push(self, temp_s, temp_t, flow, None, overflow, None)
 
-        # self.play(FadeOut(temp_s, temp_t),
-        #           FadeOut(parallel, t_overflow, overflow))
-        # self.wait()
-        # # ---Cleanning Stage---
-        # del temp_s, temp_s_height
-        # del temp_t, temp_t_height
-        # del flow, overflow, t_overflow, parallel
+        self.play(FadeOut(temp_s, temp_t),
+                  FadeOut(parallel, t_overflow, overflow))
+        self.wait()
+        # ---Cleanning Stage---
+        del temp_s, temp_s_height
+        del temp_t, temp_t_height
+        del flow, overflow, t_overflow, parallel
         
         # ---Init Residual Net and Nessassary Data Structure---
         vertices, edges = init_flow_net()
